@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大狗嚼嚼嚼</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        #game-canvas {
+            background-color: #ffffff;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #game-title {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .control-label {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .map-size-btn, .control-btn, #start-btn {
+            padding: 0.8rem 1.5rem;
+            margin: 0 0.5rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .map-size-btn:hover, .control-btn:hover, #start-btn:hover {
+            background-color: #45a049;
+        }
+
+        .selected {
+            background-color: #2E7D32;
+        }
+
+        #start-btn {
+            font-size: 1.5rem;
+            padding: 1rem 2rem;
+            margin-top: 1rem;
+        }
+
+        #game-over-screen, #victory-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 20;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .screen-title {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .screen-btn {
+            padding: 0.8rem 1.5rem;
+            margin: 0.5rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .screen-btn:hover {
+            background-color: #45a049;
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 100px;
+            left: 100px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: none;
+            z-index: 5;
+            touch-action: none;
+        }
+
+        #joystick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+        }
+
+        #win-condition {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            color: #333;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="start-screen">
+        <h1 id="game-title">大狗嚼嚼嚼</h1>
+        <div class="control-group">
+            <label class="control-label">选择地图大小</label>
+            <button class="map-size-btn selected" data-size="small">小型地图</button>
+            <button class="map-size-btn" data-size="medium">中型地图</button>
+            <button class="map-size-btn" data-size="large">大型地图</button>
+        </div>
+        <div class="control-group">
+            <label class="control-label">选择控制方式</label>
+            <button class="control-btn selected" data-control="keyboard">键盘控制</button>
+            <button class="control-btn" data-control="joystick">虚拟摇杆</button>
+        </div>
+        <p id="win-condition">撑破地图即可获胜！</p>
+        <button id="start-btn">开始游戏</button>
+    </div>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="joystick-container">
+            <div id="joystick"></div>
+        </div>
+    </div>
+
+    <div id="game-over-screen">
+        <h2 class="screen-title">游戏失败</h2>
+        <button class="screen-btn" id="restart-btn">重新开始</button>
+        <button class="screen-btn" id="home-btn-fail">回到首页</button>
+    </div>
+
+    <div id="victory-screen">
+        <h2 class="screen-title">恭喜通关！</h2>
+        <button class="screen-btn" id="restart-btn-victory">重新开始</button>
+        <button class="screen-btn" id="home-btn-victory">回到首页</button>
+    </div>
+
+    <script type="module" src="js/game.js"></script>
+</body>
+
+</html>
