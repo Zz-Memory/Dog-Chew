@@ -128,7 +128,7 @@ class Player {
             }
         }
     }
-
+    
     checkEnemyCollisions() {
         for (let i = gameState.enemies.length - 1; i >= 0; i--) {
             const enemy = gameState.enemies[i];
@@ -206,6 +206,9 @@ class Enemy {
 
         // 检查资源碰撞
         this.checkResourceCollisions();
+        
+        // 检查敌人碰撞
+        this.checkEnemyCollisions();
     }
 
     calculateSpeed() {
@@ -313,6 +316,28 @@ class Enemy {
                 // 吃掉资源，增加大小
                 this.size += resource.size / 5;
                 gameState.resources.splice(i, 1);
+            }
+        }
+    }
+    
+    checkEnemyCollisions() {
+        for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+            const enemy = gameState.enemies[i];
+            
+            // 跳过自己
+            if (enemy === this) continue;
+            
+            const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
+            
+            if (distance < (this.size / 2 + enemy.size / 2)) {
+                // 碰撞发生
+                if (this.size > enemy.size) {
+                    // 当前敌人吃掉另一个敌人
+                    this.size += enemy.size / 3;
+                    gameState.enemies.splice(i, 1);
+                    spawnEnemy(); // 生成新敌人保持数量
+                }
+                // 注意：如果当前敌人较小，不需要处理，因为另一个敌人会处理这个碰撞
             }
         }
     }
