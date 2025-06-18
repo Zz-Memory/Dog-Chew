@@ -19,13 +19,17 @@ const config = {
         medium: 100,
         large: 80
     },
-    playerInitialSize: 30,
+    playerInitialSizes: {
+        small: 30,
+        medium: 50,
+        large: 100
+    },
     minSpeed: 20,
     safeDistance: 100,
     enemyCounts: {
         small: 10,
-        medium: 25,
-        large: 50
+        medium: 20,
+        large: 35
     },
     resourceDensity: 0.75, // 地图资源密度，确保3/4的地图布满资源
     resourceGenerationRate: 1000, // 每秒生成资源的速率（毫秒）
@@ -134,17 +138,29 @@ class Player {
             const enemy = gameState.enemies[i];
             const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
             
-            if (distance < (this.size / 2 + enemy.size / 2)) {
-                // 碰撞发生
-                if (this.size > enemy.size) {
-                    // 玩家吃掉敌人
-                    this.size += enemy.size / 3;
-                    gameState.enemies.splice(i, 1);
-                    spawnEnemy(); // 生成新敌人保持数量
-                } else {
-                    // 玩家被吃
-                    gameOver();
-                    return;
+            // 计算重叠面积判定伤害
+            const playerRadius = this.size / 2;
+            const enemyRadius = enemy.size / 2;
+            
+            if (distance < (playerRadius + enemyRadius)) {
+                // 计算重叠面积
+                const overlapArea = calculateOverlapArea(playerRadius, enemyRadius, distance);
+                const playerArea = Math.PI * playerRadius * playerRadius;
+                const enemyArea = Math.PI * enemyRadius * enemyRadius;
+                
+                // 检查重叠面积是否达到任一角色面积的1/3
+                if (overlapArea >= playerArea / 3 || overlapArea >= enemyArea / 3) {
+                    // 伤害判定发生
+                    if (this.size > enemy.size) {
+                        // 玩家吃掉敌人，获得敌人面积的15%
+                        this.size += enemy.size * 0.15;
+                        gameState.enemies.splice(i, 1);
+                        spawnEnemy(); // 生成新敌人保持数量
+                    } else {
+                        // 玩家被吃
+                        gameOver();
+                        return;
+                    }
                 }
             }
         }
@@ -336,15 +352,27 @@ class Enemy {
             
             const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
             
-            if (distance < (this.size / 2 + enemy.size / 2)) {
-                // 碰撞发生
-                if (this.size > enemy.size) {
-                    // 当前敌人吃掉另一个敌人
-                    this.size += enemy.size / 3;
-                    gameState.enemies.splice(i, 1);
-                    spawnEnemy(); // 生成新敌人保持数量
+            // 计算重叠面积判定伤害
+            const thisRadius = this.size / 2;
+            const enemyRadius = enemy.size / 2;
+            
+            if (distance < (thisRadius + enemyRadius)) {
+                // 计算重叠面积
+                const overlapArea = calculateOverlapArea(thisRadius, enemyRadius, distance);
+                const thisArea = Math.PI * thisRadius * thisRadius;
+                const enemyArea = Math.PI * enemyRadius * enemyRadius;
+                
+                // 检查重叠面积是否达到任一角色面积的1/3
+                if (overlapArea >= thisArea / 3 || overlapArea >= enemyArea / 3) {
+                    // 伤害判定发生
+                    if (this.size > enemy.size) {
+                        // 当前敌人吃掉另一个敌人，获得敌人面积的15%
+                        this.size += enemy.size * 0.15;
+                        gameState.enemies.splice(i, 1);
+                        spawnEnemy(); // 生成新敌人保持数量
+                    }
+                    // 注意：如果当前敌人较小，不需要处理，因为另一个敌人会处理这个碰撞
                 }
-                // 注意：如果当前敌人较小，不需要处理，因为另一个敌人会处理这个碰撞
             }
         }
     }
@@ -390,6 +418,28 @@ function getDistance(x1, y1, x2, y2) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
+// 计算两个圆的重叠面积
+function calculateOverlapArea(r1, r2, d) {
+    // 如果距离大于等于两个半径之和，没有重叠
+    if (d >= r1 + r2) {
+        return 0;
+    }
+    
+    // 如果一个圆完全包含另一个圆
+    if (d <= Math.abs(r1 - r2)) {
+        const smallerRadius = Math.min(r1, r2);
+        return Math.PI * smallerRadius * smallerRadius;
+    }
+    
+    // 计算两个圆相交的重叠面积
+    // 使用圆相交面积公式
+    const part1 = r1 * r1 * Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
+    const part2 = r2 * r2 * Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+    const part3 = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
+    
+    return part1 + part2 - part3;
+}
+
 function getRandomColor() {
     const colors = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF', '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41', '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40'];
     return colors[Math.floor(Math.random() * colors.length)];
@@ -431,24 +481,96 @@ function generateResource() {
 
 function spawnEnemy() {
     const mapSize = config.mapSizes[gameState.mapSize];
-    let x, y;
+    let x, y, size;
     let isSafe = false;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    // 按照Prompt.md要求：敌人最小为玩家初始大小，最大不超过地图1/20
+    // 但为了游戏平衡，限制敌人初始最大大小不超过玩家初始大小的2倍
+    const minSize = config.playerInitialSizes[gameState.mapSize];
+    const theoreticalMaxSize = Math.min(mapSize.width, mapSize.height) / 20;
+    const balancedMaxSize = config.playerInitialSizes[gameState.mapSize] * 2;
+    const maxSize = Math.min(theoreticalMaxSize, balancedMaxSize);
+    size = Math.random() * (maxSize - minSize) + minSize;
+    
+    // 按照Prompt.md要求计算安全距离：敌人半径 + 玩家半径 + 玩家初始移动速度 × 3
+    // 为了确保安全，在大型地图中增加额外的安全缓冲
+    const enemyRadius = size / 2;
+    const playerRadius = gameState.player.size / 2;
+    const playerInitialSpeed = getInitialSpeed();
+    const baseSafeDistance = enemyRadius + playerRadius + playerInitialSpeed * 3;
+    
+    // 根据地图大小和敌人大小增加安全缓冲
+    const mapSizeMultiplier = gameState.mapSize === 'large' ? 1.5 : gameState.mapSize === 'medium' ? 1.2 : 1.0;
+    const enemySizeMultiplier = size > config.playerInitialSizes[gameState.mapSize] * 1.5 ? 1.3 : 1.0;
+    const safeDistance = baseSafeDistance * mapSizeMultiplier * enemySizeMultiplier;
     
     // 确保敌人生成位置与玩家保持安全距离
-    while (!isSafe) {
+    while (!isSafe && attempts < maxAttempts) {
         x = Math.random() * mapSize.width;
         y = Math.random() * mapSize.height;
         
-        const distance = getDistance(x, y, gameState.player.x, gameState.player.y);
-        if (distance > config.safeDistance + gameState.player.size / 2) {
-            isSafe = true;
+        attempts++;
+        
+        // 检查与玩家的安全距离
+        const distanceToPlayer = getDistance(x, y, gameState.player.x, gameState.player.y);
+        
+        if (distanceToPlayer >= safeDistance) {
+            // 检查与其他敌人的距离，避免重叠
+            let safeFromEnemies = true;
+            for (let enemy of gameState.enemies) {
+                const distanceToEnemy = getDistance(x, y, enemy.x, enemy.y);
+                const otherEnemyRadius = enemy.size / 2;
+                const minDistanceToEnemy = enemyRadius + otherEnemyRadius + 10; // 简单的间隔
+                
+                if (distanceToEnemy < minDistanceToEnemy) {
+                    safeFromEnemies = false;
+                    break;
+                }
+            }
+            
+            if (safeFromEnemies) {
+                isSafe = true;
+            }
         }
     }
     
-    // 随机大小，最小为玩家初始大小，最大为地图的1/16
-    const minSize = config.playerInitialSize;
-    const maxSize = Math.min(mapSize.width, mapSize.height) / 16;
-    const size = Math.random() * (maxSize - minSize) + minSize;
+    // 如果仍未找到安全位置，在地图边缘生成
+    if (!isSafe) {
+        // 确保至少与玩家保持基本安全距离
+        const minDistanceFromPlayer = safeDistance;
+        const margin = Math.max(size, safeDistance / 2); // 使用安全距离的一半作为边缘距离
+        
+        // 直接选择离玩家最远的角落，确保最大安全距离
+        const corners = [
+            { x: margin, y: margin },
+            { x: mapSize.width - margin, y: margin },
+            { x: mapSize.width - margin, y: mapSize.height - margin },
+            { x: margin, y: mapSize.height - margin }
+        ];
+        
+        let maxDistance = 0;
+        let bestCorner = corners[0];
+        for (let corner of corners) {
+            const distance = getDistance(corner.x, corner.y, gameState.player.x, gameState.player.y);
+            if (distance > maxDistance) {
+                maxDistance = distance;
+                bestCorner = corner;
+            }
+        }
+        
+        x = bestCorner.x;
+        y = bestCorner.y;
+        
+        // 如果最远角落仍然不够安全，则减小敌人大小
+        const finalDistance = getDistance(x, y, gameState.player.x, gameState.player.y);
+        if (finalDistance < minDistanceFromPlayer) {
+            // 减小敌人大小以确保安全
+            const requiredSizeReduction = (minDistanceFromPlayer - finalDistance) * 2;
+            size = Math.max(minSize, size - requiredSizeReduction);
+        }
+    }
     
     gameState.enemies.push(new Enemy(x, y, size));
 }
@@ -486,7 +608,8 @@ function resetGame() {
     gameState.canvas.height = mapSize.height;
     
     // 创建玩家
-    gameState.player = new Player(mapSize.width / 2, mapSize.height / 2, config.playerInitialSize);
+    const playerInitialSize = config.playerInitialSizes[gameState.mapSize];
+    gameState.player = new Player(mapSize.width / 2, mapSize.height / 2, playerInitialSize);
     
     // 生成资源和敌人
     spawnResources();
