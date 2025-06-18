@@ -40,12 +40,11 @@
         #game-canvas {
             background-color: #ffffff;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            max-width: 100vw;
-            max-height: 100vh;
-            object-fit: contain;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
         }
 
         #start-screen {
@@ -236,18 +235,13 @@
 <body>
     <div id="start-screen">
         <h1 id="game-title">大狗嚼嚼嚼</h1>
-        <div class="control-group">
-            <label class="control-label">选择地图大小</label>
-            <button class="map-size-btn selected" data-size="small">小型地图</button>
-            <button class="map-size-btn" data-size="medium">中型地图</button>
-            <button class="map-size-btn" data-size="large">大型地图</button>
-        </div>
+        <!-- 地图大小选择已移除，统一使用中型地图 -->
         <div class="control-group">
             <label class="control-label">选择控制方式</label>
             <button class="control-btn selected" data-control="keyboard">键盘控制</button>
             <button class="control-btn" data-control="joystick">虚拟摇杆</button>
         </div>
-        <p id="win-condition">撑破地图即可获胜！</p>
+        <p id="win-condition">避开炸弹，吃到资源，撑破地图即可获胜</p>
         <button id="start-btn">开始游戏</button>
     </div>
 
