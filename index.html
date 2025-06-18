@@ -21,20 +21,31 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
 
         #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             display: none;
+            background-color: #000;
         }
 
         #game-canvas {
             background-color: #ffffff;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
         }
 
         #start-screen {
@@ -42,10 +53,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background-color: #f0f0f0;
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             z-index: 10;
@@ -101,11 +112,11 @@
         #game-over-screen,
         #victory-screen {
             display: none;
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 20;
             flex-direction: column;
@@ -136,11 +147,11 @@
         }
 
         #joystick-container {
-            position: absolute;
-            bottom: 100px;
-            left: 100px;
-            width: 150px;
-            height: 150px;
+            position: fixed;
+            bottom: 5vh;
+            left: 5vw;
+            width: min(150px, 15vw);
+            height: min(150px, 15vw);
             background-color: rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: none;
@@ -164,6 +175,60 @@
             margin-top: 1rem;
             color: #333;
             text-align: center;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            #game-title {
+                font-size: 2rem;
+            }
+
+            .control-label {
+                font-size: 1rem;
+            }
+
+            .map-size-btn,
+            .control-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+                margin: 0.2rem;
+            }
+
+            #start-btn {
+                font-size: 1.2rem;
+                padding: 0.8rem 1.5rem;
+            }
+
+            .screen-title {
+                font-size: 2rem;
+            }
+
+            #win-condition {
+                font-size: 1rem;
+                padding: 0 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #game-title {
+                font-size: 1.5rem;
+            }
+
+            .map-size-btn,
+            .control-btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.8rem;
+                margin: 0.1rem;
+            }
+
+            #start-btn {
+                font-size: 1rem;
+                padding: 0.6rem 1.2rem;
+            }
+
+            .screen-title {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>

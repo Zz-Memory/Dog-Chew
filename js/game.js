@@ -42,7 +42,7 @@ const config = {
     small: 5, // 小型地图：5个
     medium: 10, // 中型地图：10个
     large: 15, // 大型地图：15个
-  }
+  },
 };
 
 // 游戏状态
@@ -720,6 +720,9 @@ function resetGame() {
   gameState.canvas.width = mapSize.width;
   gameState.canvas.height = mapSize.height;
 
+  // 调整画布显示尺寸
+  resizeCanvas();
+
   // 创建玩家
   const playerInitialSize = config.playerInitialSizes[gameState.mapSize];
   gameState.player = new Player(
@@ -777,16 +780,33 @@ function gameLoop(timestamp) {
   const targetEnemyCount = config.enemyCounts[gameState.mapSize];
   if (gameState.enemies.length < targetEnemyCount) {
     gameState.enemyTimer += deltaTime * 1000; // 转换为毫秒
-    if (gameState.enemyTimer >= config.enemyGenerationRates[gameState.mapSize]) {
+    if (
+      gameState.enemyTimer >= config.enemyGenerationRates[gameState.mapSize]
+    ) {
       gameState.enemyTimer = 0;
       spawnEnemy();
     }
   }
 
-  // 设置相机跟随玩家
-  const cameraX = gameState.player.x - window.innerWidth / 2;
-  const cameraY = gameState.player.y - window.innerHeight / 2;
-  
+  // 计算基于玩家大小的缩放比例
+  const baseScale = 1.0;
+  const playerSizeRatio = gameState.player.size / gameState.player.initialSize;
+  // 使用更平缓的缩放算法，减少缩放变化的敏感度
+  const scaleFactor = 0.05; // 缩放敏感度，值越小变化越平缓
+  const zoomFactor = Math.max(
+    0.9,
+    Math.min(1.1, baseScale - (playerSizeRatio - 1) * scaleFactor)
+  );
+
+  // 获取当前画布显示尺寸
+  const canvasRect = gameState.canvas.getBoundingClientRect();
+  const displayWidth = canvasRect.width;
+  const displayHeight = canvasRect.height;
+
+  // 设置相机跟随玩家（考虑缩放）
+  const cameraX = gameState.player.x - displayWidth / zoomFactor / 2;
+  const cameraY = gameState.player.y - displayHeight / zoomFactor / 2;
+
   // 重置变换矩阵并清空整个画布
   gameState.ctx.setTransform(1, 0, 0, 1, 0, 0);
   gameState.ctx.clearRect(
@@ -795,9 +815,16 @@ function gameLoop(timestamp) {
     gameState.canvas.width,
     gameState.canvas.height
   );
-  
-  // 应用相机变换
-  gameState.ctx.setTransform(1, 0, 0, 1, -cameraX, -cameraY);
+
+  // 应用相机变换和缩放
+  gameState.ctx.setTransform(
+    zoomFactor,
+    0,
+    0,
+    zoomFactor,
+    -cameraX * zoomFactor,
+    -cameraY * zoomFactor
+  );
 
   // 绘制边界
   gameState.ctx.strokeStyle = "#333";
@@ -828,15 +855,56 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
+// 画布尺寸调整函数
+function resizeCanvas() {
+  const canvas = gameState.canvas;
+  if (!canvas) return;
+
+  // 获取窗口尺寸
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  // 如果游戏正在运行，保持地图尺寸比例
+  if (gameState.isRunning) {
+    const mapSize = config.mapSizes[gameState.mapSize];
+    const mapAspectRatio = mapSize.width / mapSize.height;
+    const windowAspectRatio = windowWidth / windowHeight;
+
+    let canvasWidth, canvasHeight;
+
+    if (windowAspectRatio > mapAspectRatio) {
+      // 窗口更宽，以高度为准
+      canvasHeight = windowHeight;
+      canvasWidth = canvasHeight * mapAspectRatio;
+    } else {
+      // 窗口更高，以宽度为准
+      canvasWidth = windowWidth;
+      canvasHeight = canvasWidth / mapAspectRatio;
+    }
+
+    canvas.style.width = canvasWidth + "px";
+    canvas.style.height = canvasHeight + "px";
+  } else {
+    // 游戏未运行时，使用窗口尺寸
+    canvas.width = windowWidth;
+    canvas.height = windowHeight;
+    canvas.style.width = windowWidth + "px";
+    canvas.style.height = windowHeight + "px";
+  }
+}
+
 // 初始化函数
 function init() {
   // 获取画布和上下文
   gameState.canvas = document.getElementById("game-canvas");
   gameState.ctx = gameState.canvas.getContext("2d");
 
-  // 设置画布大小为窗口大小
-  gameState.canvas.width = window.innerWidth;
-  gameState.canvas.height = window.innerHeight;
+  // 设置画布大小适应屏幕
+  resizeCanvas();
+
+  // 监听窗口大小变化
+  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("orientationchange", resizeCanvas);
 
   // 地图大小选择按钮
   const mapSizeButtons = document.querySelectorAll(".map-size-btn");
