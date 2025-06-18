@@ -17,9 +17,9 @@ const config = {
   },
   // 不同地图大小的玩家初始速度
   initialSpeeds: {
-    small: 120, // 小地图速度快
-    medium: 100,
-    large: 80,  // 大地图速度慢
+    small: 180, // 小地图速度快
+    medium: 150,
+    large: 120,  // 大地图速度慢
   },
   // 不同地图大小的玩家初始尺寸
   playerInitialSizes: {
@@ -27,7 +27,7 @@ const config = {
     medium: 50,
     large: 100, // 大地图初始尺寸大
   },
-  minSpeed: 20,
+  minSpeed: 100,
   // 不同地图大小的安全距离
   safeDistance: {
     small: 80,  // 小地图安全距离小
@@ -48,9 +48,9 @@ const config = {
   },
   // 不同地图大小的资源生成速率（毫秒）
   resourceGenerationRate: {
-    small: 150,  // 小地图资源生成非常快
-    medium: 200,
-    large: 250, // 大地图资源生成较快
+    small: 75,  // 小地图资源生成非常快（加快2倍）
+    medium: 100, // 加快2倍
+    large: 125, // 大地图资源生成较快（加快2倍）
   },
   // 不同地图大小的敌人生成速率（毫秒）
   enemyGenerationRates: {
@@ -219,8 +219,24 @@ class Player {
       const distance = getDistance(this.x, this.y, bomb.x, bomb.y);
 
       if (distance < this.size / 2 + bomb.size / 2) {
-        // 碰到炸弹，减少体积10%
-        const shrinkAmount = this.size * config.bombs.shrinkRatio;
+        // 获取地图尺寸，用于计算惩罚上限
+        const mapSize = config.mapSizes[gameState.mapSize];
+        const victorySize = Math.min(mapSize.width, mapSize.height);
+        
+        // 计算当前尺寸与胜利尺寸的比例
+        const sizeRatio = this.size / victorySize;
+        
+        // 动态调整惩罚比例：尺寸越接近胜利条件，惩罚越轻
+        // 当尺寸达到胜利条件的40%以上时，惩罚减轻
+        let adjustedShrinkRatio = config.bombs.shrinkRatio;
+        if (sizeRatio > 0.4) {
+          // 线性减少惩罚，从10%逐渐减少到1%
+          adjustedShrinkRatio = config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
+          adjustedShrinkRatio = Math.max(0.01, adjustedShrinkRatio); // 最低1%的惩罚
+        }
+        
+        // 碰到炸弹，减少体积
+        const shrinkAmount = this.size * adjustedShrinkRatio;
         this.size -= shrinkAmount;
         
         // 将减少的体积转化为资源散布在周围
@@ -336,7 +352,7 @@ class Enemy {
     this.y = y;
     this.size = size;
     this.initialSize = size;
-    this.speed = getInitialSpeed() * (0.9 + Math.random() * 0.1); // 初始速度比玩家随机减少0-10%
+    this.speed = getInitialSpeed() * (0.95 + Math.random() * 0.1); // 初始速度比玩家随机减少0-5%
     this.targetX = x;
     this.targetY = y;
     this.retargetTimer = 0;
@@ -522,8 +538,24 @@ class Enemy {
       const distance = getDistance(this.x, this.y, bomb.x, bomb.y);
 
       if (distance < this.size / 2 + bomb.size / 2) {
-        // 碰到炸弹，减少体积10%
-        const shrinkAmount = this.size * config.bombs.shrinkRatio;
+        // 获取地图尺寸，用于计算惩罚上限
+        const mapSize = config.mapSizes[gameState.mapSize];
+        const victorySize = Math.min(mapSize.width, mapSize.height);
+        
+        // 计算当前尺寸与胜利尺寸的比例
+        const sizeRatio = this.size / victorySize;
+        
+        // 动态调整惩罚比例：尺寸越接近胜利条件，惩罚越轻
+        // 当尺寸达到胜利条件的40%以上时，惩罚减轻
+        let adjustedShrinkRatio = config.bombs.shrinkRatio;
+        if (sizeRatio > 0.4) {
+          // 线性减少惩罚，从10%逐渐减少到1%
+          adjustedShrinkRatio = config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
+          adjustedShrinkRatio = Math.max(0.01, adjustedShrinkRatio); // 最低1%的惩罚
+        }
+        
+        // 碰到炸弹，减少体积
+        const shrinkAmount = this.size * adjustedShrinkRatio;
         this.size -= shrinkAmount;
         
         // 将减少的体积转化为资源散布在周围
