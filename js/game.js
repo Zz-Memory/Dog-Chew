@@ -164,6 +164,13 @@ class Player {
         gameState.ctx.clip();
         gameState.ctx.drawImage(this.img, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
         gameState.ctx.restore();
+        
+        // 绘制黑色边框
+        gameState.ctx.beginPath();
+        gameState.ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+        gameState.ctx.strokeStyle = '#000000';
+        gameState.ctx.lineWidth = 2;
+        gameState.ctx.stroke();
     }
 }
 
@@ -349,6 +356,13 @@ class Enemy {
         gameState.ctx.clip();
         gameState.ctx.drawImage(this.img, this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
         gameState.ctx.restore();
+        
+        // 绘制黑色边框
+        gameState.ctx.beginPath();
+        gameState.ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+        gameState.ctx.strokeStyle = '#000000';
+        gameState.ctx.lineWidth = 2;
+        gameState.ctx.stroke();
     }
 }
 
