@@ -4,8 +4,6 @@ import { cat1Url } from "../img/cat/cat1.js";
 import { cat2Url } from "../img/cat/cat2.js";
 import { cat3Url } from "../img/cat/cat3.js";
 import { cat4Url } from "../img/cat/cat4.js";
-import { cat5Url } from "../img/cat/cat5.js";
-import { cat6Url } from "../img/cat/cat6.js";
 
 // 游戏配置
 const config = {
@@ -774,7 +772,7 @@ function getRandomColor() {
 }
 
 function getRandomCatImage() {
-  const catImages = [cat1Url, cat2Url, cat3Url, cat4Url, cat5Url, cat6Url];
+  const catImages = [cat1Url, cat2Url, cat3Url, cat4Url];
   return catImages[Math.floor(Math.random() * catImages.length)];
 }
 
