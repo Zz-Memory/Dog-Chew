@@ -13,26 +13,26 @@ const config = {
   initialSpeeds: {
     small: 180, // 小地图速度快
     medium: 150,
-    large: 120,  // 大地图速度慢
+    large: 120, // 大地图速度慢
   },
   // 不同地图大小的玩家初始尺寸
   playerInitialSizes: {
-    small: 30,  // 小地图初始尺寸小
+    small: 30, // 小地图初始尺寸小
     medium: 50,
     large: 100, // 大地图初始尺寸大
   },
   minSpeed: 100,
   // 不同地图大小的安全距离
   safeDistance: {
-    small: 80,  // 小地图安全距离小
+    small: 80, // 小地图安全距离小
     medium: 120,
     large: 160, // 大地图安全距离大
   },
   // 不同地图大小的敌人数量
   enemyCounts: {
-    small: 8,   // 小地图敌人少
+    small: 8, // 小地图敌人少
     medium: 15,
-    large: 25,  // 大地图敌人多
+    large: 25, // 大地图敌人多
   },
   // 不同地图大小的资源密度
   resourceDensity: {
@@ -42,7 +42,7 @@ const config = {
   },
   // 不同地图大小的资源生成速率（毫秒）
   resourceGenerationRate: {
-    small: 75,  // 小地图资源生成非常快（加快2倍）
+    small: 75, // 小地图资源生成非常快（加快2倍）
     medium: 100, // 加快2倍
     large: 125, // 大地图资源生成较快（加快2倍）
   },
@@ -60,9 +60,9 @@ const config = {
   },
   // 不同地图大小的网格尺寸
   gridSize: {
-    small: 40,  // 小地图网格小
+    small: 40, // 小地图网格小
     medium: 60,
-    large: 80,  // 大地图网格大
+    large: 80, // 大地图网格大
   },
   // 炸弹相关配置
   bombs: {
@@ -202,11 +202,11 @@ class Player {
         gameState.resources.splice(i, 1);
       }
     }
-    
+
     // 检查炸弹碰撞
     this.checkBombCollisions();
   }
-  
+
   checkBombCollisions() {
     for (let i = gameState.bombs.length - 1; i >= 0; i--) {
       const bomb = gameState.bombs[i];
@@ -216,51 +216,52 @@ class Player {
         // 获取地图尺寸，用于计算惩罚上限
         const mapSize = config.mapSizes[gameState.mapSize];
         const victorySize = Math.min(mapSize.width, mapSize.height);
-        
+
         // 计算当前尺寸与胜利尺寸的比例
         const sizeRatio = this.size / victorySize;
-        
+
         // 动态调整惩罚比例：尺寸越接近胜利条件，惩罚越轻
         // 当尺寸达到胜利条件的40%以上时，惩罚减轻
         let adjustedShrinkRatio = config.bombs.shrinkRatio;
         if (sizeRatio > 0.4) {
           // 线性减少惩罚，从10%逐渐减少到1%
-          adjustedShrinkRatio = config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
+          adjustedShrinkRatio =
+            config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
           adjustedShrinkRatio = Math.max(0.01, adjustedShrinkRatio); // 最低1%的惩罚
         }
-        
+
         // 碰到炸弹，减少体积
         const shrinkAmount = this.size * adjustedShrinkRatio;
         this.size -= shrinkAmount;
-        
+
         // 将减少的体积转化为资源散布在周围
         this.createResourcesFromShrink(bomb.x, bomb.y, shrinkAmount);
-        
+
         // 移除炸弹
         gameState.bombs.splice(i, 1);
       }
     }
   }
-  
+
   createResourcesFromShrink(bombX, bombY, shrinkAmount) {
     // 将减少的体积转化为资源
     const resourceCount = config.bombs.resourceCount;
     const resourceSize = shrinkAmount / resourceCount;
-    
+
     // 获取初始速度作为资源散布距离
     const initialSpeed = getInitialSpeed();
-    
+
     // 在炸弹周围随机位置生成资源
     for (let i = 0; i < resourceCount; i++) {
       // 随机角度和距离
       const angle = Math.random() * Math.PI * 2;
       // 使用初始速度作为基准距离，添加一些随机性
       const distance = initialSpeed * (0.8 + Math.random() * 0.4); // 初始速度的0.8-1.2倍
-      
+
       // 计算资源位置
       const x = bombX + Math.cos(angle) * distance;
       const y = bombY + Math.sin(angle) * distance;
-      
+
       // 创建新资源
       const resource = new Resource(x, y);
       resource.size = Math.max(5, Math.min(15, resourceSize)); // 限制资源大小在5-15之间
@@ -293,8 +294,9 @@ class Player {
           if (this.size > enemy.size) {
             // 玩家吃掉敌人，获得敌人面积的一部分（使用对数函数使成长更平缓）
             // 使用对数函数：增长量随着角色尺寸增大而减少
-            const growthFactor = 1 / (1 + Math.log10(Math.max(1, this.size / 100)));
-            this.size += (enemy.size * 0.1) * growthFactor;
+            const growthFactor =
+              1 / (1 + Math.log10(Math.max(1, this.size / 100)));
+            this.size += enemy.size * 0.1 * growthFactor;
             gameState.enemies.splice(i, 1);
             spawnEnemy(); // 生成新敌人保持数量
           } else {
@@ -521,11 +523,11 @@ class Enemy {
         gameState.resources.splice(i, 1);
       }
     }
-    
+
     // 检查炸弹碰撞
     this.checkBombCollisions();
   }
-  
+
   checkBombCollisions() {
     for (let i = gameState.bombs.length - 1; i >= 0; i--) {
       const bomb = gameState.bombs[i];
@@ -535,51 +537,52 @@ class Enemy {
         // 获取地图尺寸，用于计算惩罚上限
         const mapSize = config.mapSizes[gameState.mapSize];
         const victorySize = Math.min(mapSize.width, mapSize.height);
-        
+
         // 计算当前尺寸与胜利尺寸的比例
         const sizeRatio = this.size / victorySize;
-        
+
         // 动态调整惩罚比例：尺寸越接近胜利条件，惩罚越轻
         // 当尺寸达到胜利条件的40%以上时，惩罚减轻
         let adjustedShrinkRatio = config.bombs.shrinkRatio;
         if (sizeRatio > 0.4) {
           // 线性减少惩罚，从10%逐渐减少到1%
-          adjustedShrinkRatio = config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
+          adjustedShrinkRatio =
+            config.bombs.shrinkRatio * (1 - (sizeRatio - 0.4) * 1.67);
           adjustedShrinkRatio = Math.max(0.01, adjustedShrinkRatio); // 最低1%的惩罚
         }
-        
+
         // 碰到炸弹，减少体积
         const shrinkAmount = this.size * adjustedShrinkRatio;
         this.size -= shrinkAmount;
-        
+
         // 将减少的体积转化为资源散布在周围
         this.createResourcesFromShrink(bomb.x, bomb.y, shrinkAmount);
-        
+
         // 移除炸弹
         gameState.bombs.splice(i, 1);
       }
     }
   }
-  
+
   createResourcesFromShrink(bombX, bombY, shrinkAmount) {
     // 将减少的体积转化为资源
     const resourceCount = config.bombs.resourceCount;
     const resourceSize = shrinkAmount / resourceCount;
-    
+
     // 获取初始速度作为资源散布距离
     const initialSpeed = getInitialSpeed();
-    
+
     // 在炸弹周围随机位置生成资源
     for (let i = 0; i < resourceCount; i++) {
       // 随机角度和距离
       const angle = Math.random() * Math.PI * 2;
       // 使用初始速度作为基准距离，添加一些随机性
       const distance = initialSpeed * (0.8 + Math.random() * 0.4); // 初始速度的0.8-1.2倍
-      
+
       // 计算资源位置
       const x = bombX + Math.cos(angle) * distance;
       const y = bombY + Math.sin(angle) * distance;
-      
+
       // 创建新资源
       const resource = new Resource(x, y);
       resource.size = Math.max(5, Math.min(15, resourceSize)); // 限制资源大小在5-15之间
@@ -616,8 +619,9 @@ class Enemy {
           if (this.size > enemy.size) {
             // 当前敌人吃掉另一个敌人，获得敌人面积的一部分（使用对数函数使成长更平缓）
             // 使用对数函数：增长量随着角色尺寸增大而减少
-            const growthFactor = 1 / (1 + Math.log10(Math.max(1, this.size / 100)));
-            this.size += (enemy.size * 0.1) * growthFactor;
+            const growthFactor =
+              1 / (1 + Math.log10(Math.max(1, this.size / 100)));
+            this.size += enemy.size * 0.1 * growthFactor;
             gameState.enemies.splice(i, 1);
             spawnEnemy(); // 生成新敌人保持数量
           }
@@ -687,13 +691,13 @@ class Bomb {
   draw() {
     const ctx = gameState.ctx;
     const pulseSize = this.size * (1 + Math.sin(this.pulsePhase) * 0.1);
-    
+
     // 绘制炸弹主体（黑色圆形）
     ctx.beginPath();
     ctx.arc(this.x, this.y, pulseSize / 2, 0, Math.PI * 2);
     ctx.fillStyle = "#000000";
     ctx.fill();
-    
+
     // 绘制红色十字
     ctx.beginPath();
     // 水平线
@@ -705,10 +709,16 @@ class Bomb {
     ctx.strokeStyle = "#FF0000";
     ctx.lineWidth = pulseSize / 6;
     ctx.stroke();
-    
+
     // 绘制闪光效果
     ctx.beginPath();
-    ctx.arc(this.x - pulseSize / 5, this.y - pulseSize / 5, pulseSize / 10, 0, Math.PI * 2);
+    ctx.arc(
+      this.x - pulseSize / 5,
+      this.y - pulseSize / 5,
+      pulseSize / 10,
+      0,
+      Math.PI * 2
+    );
     ctx.fillStyle = "#FFFFFF";
     ctx.fill();
   }
@@ -786,7 +796,9 @@ function spawnResources() {
   const mapSize = config.mapSizes.medium;
   const area = mapSize.width * mapSize.height;
   // 使用中型地图的资源密度
-  const resourceCount = Math.floor((area * config.resourceDensity.medium) / 1000); // 根据地图大小和密度计算资源数量
+  const resourceCount = Math.floor(
+    (area * config.resourceDensity.medium) / 1000
+  ); // 根据地图大小和密度计算资源数量
 
   for (let i = 0; i < resourceCount; i++) {
     const x = Math.random() * mapSize.width;
@@ -800,33 +812,37 @@ function spawnBombs() {
   const bombCount = config.bombs.count[gameState.mapSize];
   const mapSize = config.mapSizes[gameState.mapSize];
   const margin = 50; // 边缘安全距离
-  
+
   // 计算网格大小，以便均匀分布炸弹
   const gridColumns = Math.ceil(Math.sqrt(bombCount));
   const gridRows = Math.ceil(bombCount / gridColumns);
-  
+
   const cellWidth = (mapSize.width - 2 * margin) / gridColumns;
   const cellHeight = (mapSize.height - 2 * margin) / gridRows;
-  
+
   let bombsCreated = 0;
-  
+
   // 在每个网格单元中放置一个炸弹，位置有一定随机性
   for (let row = 0; row < gridRows && bombsCreated < bombCount; row++) {
     for (let col = 0; col < gridColumns && bombsCreated < bombCount; col++) {
       // 计算网格单元的中心位置
       const cellCenterX = margin + col * cellWidth + cellWidth / 2;
       const cellCenterY = margin + row * cellHeight + cellHeight / 2;
-      
+
       // 在网格单元内随机偏移，但不超过单元大小的1/3
       const offsetX = (Math.random() - 0.5) * cellWidth * 0.6;
       const offsetY = (Math.random() - 0.5) * cellHeight * 0.6;
-      
+
       const x = cellCenterX + offsetX;
       const y = cellCenterY + offsetY;
-      
+
       // 确保炸弹不会太靠近玩家
       const safeDistance = config.safeDistance[gameState.mapSize] * 2;
-      if (!gameState.player || getDistance(x, y, gameState.player.x, gameState.player.y) >= safeDistance) {
+      if (
+        !gameState.player ||
+        getDistance(x, y, gameState.player.x, gameState.player.y) >=
+          safeDistance
+      ) {
         // 创建炸弹并添加到游戏状态
         const bomb = new Bomb(x, y);
         gameState.bombs.push(bomb);
@@ -835,11 +851,15 @@ function spawnBombs() {
         // 如果太靠近玩家，尝试在单元格的另一个位置
         const newOffsetX = (Math.random() - 0.5) * cellWidth * 0.6;
         const newOffsetY = (Math.random() - 0.5) * cellHeight * 0.6;
-        
+
         const newX = cellCenterX + newOffsetX;
         const newY = cellCenterY + newOffsetY;
-        
-        if (!gameState.player || getDistance(newX, newY, gameState.player.x, gameState.player.y) >= safeDistance) {
+
+        if (
+          !gameState.player ||
+          getDistance(newX, newY, gameState.player.x, gameState.player.y) >=
+            safeDistance
+        ) {
           const bomb = new Bomb(newX, newY);
           gameState.bombs.push(bomb);
           bombsCreated++;
@@ -848,7 +868,7 @@ function spawnBombs() {
       }
     }
   }
-  
+
   // 如果由于安全距离限制没有生成足够的炸弹，在随机位置生成剩余的炸弹
   while (bombsCreated < bombCount) {
     generateBomb();
@@ -860,19 +880,22 @@ function spawnBombs() {
 function generateBomb() {
   const mapSize = config.mapSizes[gameState.mapSize];
   const margin = 50; // 边缘安全距离
-  
+
   // 随机位置
   const x = Math.random() * (mapSize.width - 2 * margin) + margin;
   const y = Math.random() * (mapSize.height - 2 * margin) + margin;
-  
+
   // 确保炸弹不会太靠近玩家
   const safeDistance = config.safeDistance[gameState.mapSize] * 2;
-  if (gameState.player && getDistance(x, y, gameState.player.x, gameState.player.y) < safeDistance) {
+  if (
+    gameState.player &&
+    getDistance(x, y, gameState.player.x, gameState.player.y) < safeDistance
+  ) {
     // 如果太近，重新生成
     generateBomb();
     return;
   }
-  
+
   // 创建炸弹并添加到游戏状态
   const bomb = new Bomb(x, y);
   gameState.bombs.push(bomb);
@@ -1028,7 +1051,7 @@ function resetGame() {
 
   // 调整画布显示尺寸
   resizeCanvas();
-  
+
   // 使用中型地图配置
   const mapSize = config.mapSizes.medium;
 
@@ -1048,7 +1071,7 @@ function resetGame() {
   for (let i = 0; i < initialEnemyCount; i++) {
     spawnEnemy();
   }
-  
+
   // 生成炸弹
   spawnBombs();
 
@@ -1093,14 +1116,12 @@ function gameLoop(timestamp) {
   const targetEnemyCount = config.enemyCounts.medium;
   if (gameState.enemies.length < targetEnemyCount) {
     gameState.enemyTimer += deltaTime * 1000; // 转换为毫秒
-    if (
-      gameState.enemyTimer >= config.enemyGenerationRates.medium
-    ) {
+    if (gameState.enemyTimer >= config.enemyGenerationRates.medium) {
       gameState.enemyTimer = 0;
       spawnEnemy();
     }
   }
-  
+
   // 更新炸弹生成计时器
   gameState.bombTimer += deltaTime * 1000; // 转换为毫秒
   if (gameState.bombTimer >= config.bombs.generationRate[gameState.mapSize]) {
@@ -1110,7 +1131,7 @@ function gameLoop(timestamp) {
       generateBomb();
     }
   }
-  
+
   // 更新炸弹动画
   for (const bomb of gameState.bombs) {
     bomb.update(deltaTime);
@@ -1144,15 +1165,10 @@ function gameLoop(timestamp) {
     gameState.canvas.width,
     gameState.canvas.height
   );
-  
+
   // 绘制背景，使用当前画布尺寸
   gameState.ctx.fillStyle = "#f0f0f0";
-  gameState.ctx.fillRect(
-    0,
-    0,
-    gameState.canvas.width,
-    gameState.canvas.height
-  );
+  gameState.ctx.fillRect(0, 0, gameState.canvas.width, gameState.canvas.height);
 
   // 应用相机变换和缩放
   gameState.ctx.setTransform(
@@ -1171,18 +1187,13 @@ function gameLoop(timestamp) {
   const mapSize = config.mapSizes[gameState.mapSize];
   gameState.ctx.strokeStyle = "#333";
   gameState.ctx.lineWidth = 5;
-  gameState.ctx.strokeRect(
-    0,
-    0,
-    mapSize.width,
-    mapSize.height
-  );
+  gameState.ctx.strokeRect(0, 0, mapSize.width, mapSize.height);
 
   // 更新和绘制资源
   for (const resource of gameState.resources) {
     resource.draw();
   }
-  
+
   // 绘制炸弹
   for (const bomb of gameState.bombs) {
     bomb.draw();
@@ -1206,16 +1217,24 @@ function gameLoop(timestamp) {
 function drawGrid() {
   // 使用中型地图的网格尺寸
   const gridSize = config.gridSize.medium;
-  
+
   gameState.ctx.strokeStyle = "#e0e0e0";
   gameState.ctx.lineWidth = 1;
-  
+
   // 计算网格起始点（基于相机位置）
-  const startX = Math.floor(gameState.player.x / gridSize) * gridSize - gameState.canvas.width;
-  const startY = Math.floor(gameState.player.y / gridSize) * gridSize - gameState.canvas.height;
-  const endX = Math.ceil(gameState.player.x / gridSize) * gridSize + gameState.canvas.width;
-  const endY = Math.ceil(gameState.player.y / gridSize) * gridSize + gameState.canvas.height;
-  
+  const startX =
+    Math.floor(gameState.player.x / gridSize) * gridSize -
+    gameState.canvas.width;
+  const startY =
+    Math.floor(gameState.player.y / gridSize) * gridSize -
+    gameState.canvas.height;
+  const endX =
+    Math.ceil(gameState.player.x / gridSize) * gridSize +
+    gameState.canvas.width;
+  const endY =
+    Math.ceil(gameState.player.y / gridSize) * gridSize +
+    gameState.canvas.height;
+
   // 绘制垂直线
   for (let x = startX; x <= endX; x += gridSize) {
     gameState.ctx.beginPath();
@@ -1223,7 +1242,7 @@ function drawGrid() {
     gameState.ctx.lineTo(x, endY);
     gameState.ctx.stroke();
   }
-  
+
   // 绘制水平线
   for (let y = startY; y <= endY; y += gridSize) {
     gameState.ctx.beginPath();
@@ -1247,7 +1266,7 @@ function resizeCanvas() {
   canvas.height = windowHeight;
   canvas.style.width = windowWidth + "px";
   canvas.style.height = windowHeight + "px";
-  
+
   // 不再根据窗口尺寸调整地图尺寸
   // 地图尺寸保持为配置中的固定值（中型地图为3000x3000）
 }
@@ -1260,13 +1279,13 @@ function init() {
   // 设置默认地图尺寸为窗口尺寸
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
-  
+
   // 保持中型地图尺寸为3000x3000，不再根据窗口调整
   // 小型地图尺寸保持不变
-  
+
   // 中型地图固定为3000x3000
   // 注意：config.mapSizes.medium已在配置中设置为3000x3000
-  
+
   // 大型地图尺寸保持不变
 
   // 调整画布尺寸

@@ -294,7 +294,7 @@
       // 不同地图大小的玩家初始尺寸
       playerInitialSizes: {
         small: 30,  // 小地图初始尺寸小
-        medium: 50,
+        medium: 80,
         large: 100, // 大地图初始尺寸大
       },
       minSpeed: 100,
@@ -382,6 +382,10 @@
       resourceTimer: 0,
       enemyTimer: 0,
       bombTimer: 0,
+      zoomLevel: 1.0, // 视角缩放级别，默认为1.0（不缩放）
+      minZoom: 0.5,   // 最小缩放级别
+      maxZoom: 2.0,   // 最大缩放级别
+      autoZoom: true, // 是否启用自动缩放
     };
     
     // 玩家类
@@ -466,8 +470,12 @@
           const distance = getDistance(this.x, this.y, resource.x, resource.y);
     
           if (distance < this.size / 2 + resource.size / 2) {
-            // 吃到资源，增加体积
-            this.size += resource.size * 0.5;
+            // 吃到资源，增加体积，使用对数增长，体积越大增长越慢
+            const growthFactor = 0.5; // 提高基础增长系数
+            const sizeRatio = this.initialSize / this.size; // 当前体积与初始体积的比例
+            const adjustedGrowth = resource.size * growthFactor * Math.max(0.3, sizeRatio); // 至少保留30%的增长
+            
+            this.size += adjustedGrowth;
             gameState.resources.splice(i, 1);
           }
         }
@@ -477,15 +485,24 @@
         for (let i = gameState.enemies.length - 1; i >= 0; i--) {
           const enemy = gameState.enemies[i];
           const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
-    
-          // 如果玩家比敌人大，且距离小于玩家半径+敌人半径，则吃掉敌人
-          if (this.size > enemy.size * 1.2 && distance < this.size / 2) {
-            // 吃掉敌人，增加体积
-            this.size += enemy.size * 0.3;
+          
+          // 计算重叠程度：两者中心距离与两者半径之和的比例
+          const overlapThreshold = 2/3; // 重叠达到1/3时触发判定（距离小于总半径的2/3）
+          const totalRadius = this.size / 2 + enemy.size / 2;
+          const overlapRatio = distance / totalRadius;
+          
+          // 如果重叠达到阈值，并且玩家比敌人大，则吃掉敌人
+          if (overlapRatio < overlapThreshold && this.size > enemy.size * 1.2) {
+            // 吃掉敌人，增加体积，使用对数增长，体积越大增长越慢
+            const growthFactor = 0.35; // 提高基础增长系数
+            const sizeRatio = this.initialSize / this.size; // 当前体积与初始体积的比例
+            const adjustedGrowth = enemy.size * growthFactor * Math.max(0.3, sizeRatio); // 至少保留30%的增长
+            
+            this.size += adjustedGrowth;
             gameState.enemies.splice(i, 1);
           }
-          // 如果敌人比玩家大，且距离小于敌人半径，则玩家被吃掉
-          else if (enemy.size > this.size * 1.2 && distance < enemy.size / 2) {
+          // 如果重叠达到阈值，并且敌人比玩家大，则玩家被吃掉
+          else if (overlapRatio < overlapThreshold && enemy.size > this.size * 1.2) {
             gameOver();
             return;
           }
@@ -494,8 +511,8 @@
     
       checkVictoryCondition() {
         const mapSize = config.mapSizes[gameState.mapSize];
-        // 如果玩家体积超过地图宽度的一半，则获胜
-        if (this.size >= mapSize.width / 2) {
+        // 如果玩家直径达到地图宽度或高度，则获胜
+        if (this.size >= mapSize.width || this.size >= mapSize.height) {
           victory();
         }
       }
@@ -503,6 +520,8 @@
       draw(ctx, offsetX, offsetY) {
         // 绘制玩家
         ctx.save();
+        
+        // 绘制图像（使用裁剪来保持圆形）
         ctx.beginPath();
         ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
         ctx.closePath();
@@ -515,6 +534,14 @@
           this.size
         );
         ctx.restore();
+        
+        // 绘制黑色边框
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     }
     
@@ -524,6 +551,7 @@
         this.x = x;
         this.y = y;
         this.size = size;
+        this.initialSize = size; // 记录初始体积，用于速度计算
         this.speed = getRandomSpeed();
         this.targetX = x;
         this.targetY = y;
@@ -547,8 +575,12 @@
         const distance = Math.sqrt(dx * dx + dy * dy);
     
         if (distance > 1) {
-          const moveX = (dx / distance) * this.speed * deltaTime;
-          const moveY = (dy / distance) * this.speed * deltaTime;
+          // 计算实际速度，随着体积增大而减慢
+          const speedFactor = Math.max(0.3, this.initialSize / this.size); // 体积越大，速度越慢，但不低于30%
+          const actualSpeed = this.speed * speedFactor;
+          
+          const moveX = (dx / distance) * actualSpeed * deltaTime;
+          const moveY = (dy / distance) * actualSpeed * deltaTime;
           this.x += moveX;
           this.y += moveY;
         }
@@ -630,8 +662,12 @@
           const distance = getDistance(this.x, this.y, resource.x, resource.y);
     
           if (distance < this.size / 2 + resource.size / 2) {
-            // 吃到资源，增加体积
-            this.size += resource.size * 0.5;
+            // 吃到资源，增加体积，使用对数增长，体积越大增长越慢
+            const growthFactor = 0.5; // 提高基础增长系数
+            const sizeRatio = this.initialSize / this.size; // 当前体积与初始体积的比例
+            const adjustedGrowth = resource.size * growthFactor * Math.max(0.3, sizeRatio); // 至少保留30%的增长
+            
+            this.size += adjustedGrowth;
             gameState.resources.splice(i, 1);
           }
         }
@@ -643,11 +679,20 @@
           if (enemy === this) continue;
     
           const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
-    
-          // 如果当前敌人比其他敌人大，且距离小于当前敌人半径+其他敌人半径，则吃掉其他敌人
-          if (this.size > enemy.size * 1.2 && distance < this.size / 2 + enemy.size / 2) {
-            // 吃掉敌人，增加体积
-            this.size += enemy.size * 0.3;
+          
+          // 计算重叠程度：两者中心距离与两者半径之和的比例
+          const overlapThreshold = 2/3; // 重叠达到1/3时触发判定（距离小于总半径的2/3）
+          const totalRadius = this.size / 2 + enemy.size / 2;
+          const overlapRatio = distance / totalRadius;
+          
+          // 如果重叠达到阈值，并且当前敌人比其他敌人大，则吃掉其他敌人
+          if (overlapRatio < overlapThreshold && this.size > enemy.size * 1.2) {
+            // 吃掉敌人，增加体积，使用对数增长，体积越大增长越慢
+            const growthFactor = 0.35; // 提高基础增长系数
+            const sizeRatio = this.initialSize / this.size; // 当前体积与初始体积的比例
+            const adjustedGrowth = enemy.size * growthFactor * Math.max(0.3, sizeRatio); // 至少保留30%的增长
+            
+            this.size += adjustedGrowth;
             gameState.enemies.splice(i, 1);
           }
         }
@@ -675,6 +720,8 @@
       draw(ctx, offsetX, offsetY) {
         // 绘制敌人
         ctx.save();
+        
+        // 绘制图像（使用裁剪来保持圆形）
         ctx.beginPath();
         ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
         ctx.closePath();
@@ -687,6 +734,14 @@
           this.size
         );
         ctx.restore();
+        
+        // 绘制黑色边框
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     }
     
@@ -814,7 +869,10 @@
     }
     
     function getRandomSpeed() {
-      return 100 + Math.random() * 100;
+      // 获取玩家基础速度，然后让敌人速度比玩家慢10%
+      const playerBaseSpeed = getInitialSpeed();
+      const slowDownFactor = 0.9; // 减速因子，使敌人比玩家慢10%
+      return playerBaseSpeed * slowDownFactor;
     }
     
     function getRandomRetargetInterval() {
@@ -890,6 +948,11 @@
       gameState.resourceTimer = 0;
       gameState.enemyTimer = 0;
       gameState.bombTimer = 0;
+      
+      // 重置缩放相关属性
+      gameState.zoomLevel = 1.0; // 重置缩放级别为默认值
+      gameState.autoZoom = true; // 确保自动缩放功能开启
+      clearTimeout(gameState.zoomTimeout); // 清除任何可能存在的缩放超时
     
       // 创建玩家
       const mapSize = config.mapSizes[gameState.mapSize];
@@ -988,6 +1051,9 @@
       for (const bomb of gameState.bombs) {
         bomb.update(deltaTime);
       }
+      
+      // 更新视角缩放级别
+      updateZoomLevel();
     
       // 计算相机偏移
       const offsetX = calculateCameraOffsetX();
@@ -1000,6 +1066,10 @@
         gameState.canvas.width,
         gameState.canvas.height
       );
+      
+      // 应用缩放
+      gameState.ctx.save();
+      gameState.ctx.scale(gameState.zoomLevel, gameState.zoomLevel);
     
       // 绘制网格
       drawGrid(offsetX, offsetY);
@@ -1021,8 +1091,11 @@
     
       // 绘制玩家
       gameState.player.draw(gameState.ctx, offsetX, offsetY);
-    
-      // 绘制UI
+      
+      // 恢复画布状态（取消缩放）
+      gameState.ctx.restore();
+      
+      // 在恢复画布状态后绘制UI，这样UI不会受到缩放的影响
       drawUI();
     
       // 继续游戏循环
@@ -1030,11 +1103,84 @@
     }
     
     function calculateCameraOffsetX() {
-      return gameState.player.x - gameState.canvas.width / 2;
+      // 考虑缩放级别的相机偏移计算
+      const effectiveWidth = gameState.canvas.width / gameState.zoomLevel;
+      return gameState.player.x - effectiveWidth / 2;
     }
     
     function calculateCameraOffsetY() {
-      return gameState.player.y - gameState.canvas.height / 2;
+      // 考虑缩放级别的相机偏移计算
+      const effectiveHeight = gameState.canvas.height / gameState.zoomLevel;
+      return gameState.player.y - effectiveHeight / 2;
+    }
+    
+    // 更新缩放级别的函数
+    function updateZoomLevel() {
+      if (gameState.autoZoom && gameState.player) {
+        // 计算玩家进度百分比 - 基于玩家直径与地图尺寸的比例
+        const mapSize = config.mapSizes[gameState.mapSize];
+        const mapDimension = Math.min(mapSize.width, mapSize.height); // 取较小的维度
+        const progress = (gameState.player.size / mapDimension) * 100;
+        
+        // 计算能看到整个地图的缩放级别
+        const mapWidth = mapSize.width;
+        const mapHeight = mapSize.height;
+        const canvasWidth = gameState.canvas.width;
+        const canvasHeight = gameState.canvas.height;
+        
+        // 计算水平和垂直方向所需的缩放级别
+        const horizontalZoom = canvasWidth / mapWidth;
+        const verticalZoom = canvasHeight / mapHeight;
+        
+        // 取较小值确保整个地图可见
+        const fullMapZoom = Math.min(horizontalZoom, verticalZoom) * 0.9; // 稍微缩小一点以显示边界
+        
+        // 获取玩家初始大小
+        const initialPlayerSize = getInitialPlayerSize();
+        
+        // 计算玩家大小与初始大小的比例
+        const sizeRatio = gameState.player.size / initialPlayerSize;
+        
+        // 基础缩放级别 - 玩家初始状态下的缩放
+        const baseZoom = Math.min(
+          canvasWidth * 0.15 / initialPlayerSize,
+          canvasHeight * 0.15 / initialPlayerSize
+        );
+        
+        // 实现线性变化的视角调整 - 玩家进度小时视角变化慢，进度大时视角变化快
+        // 使用玩家进度百分比来调整视角变化的速率
+        // 基础视角因子 - 保持较小的初始视角变化
+        const baseViewFactor = 1.0;
+        
+        // 进度加权因子 - 随着进度增加而增加视角变化速率
+        // 将进度值（0-100）映射到一个适中的范围作为额外的变化系数
+        // 增加系数到0.006，加强后期视角变化速度
+        const progressWeight = progress * 0.006;
+        
+        // 计算视角范围因子 - 基础因子加上进度权重乘以大小比例
+        // 当进度小时，主要由baseViewFactor决定视角变化
+        // 当进度大时，progressWeight * sizeRatio的影响增大，但增长速度较之前更慢
+        const viewRangeFactor = baseViewFactor + progressWeight * sizeRatio;
+        
+        // 计算目标缩放级别 - 随着玩家变大，缩放级别变小（视野变大）
+        // 缩放级别与视角范围成反比
+        let targetZoom = baseZoom / viewRangeFactor;
+        
+        // 移除全地图视图的限制，确保视角始终随玩家成长而变化
+        // targetZoom = Math.max(targetZoom, fullMapZoom);
+        
+        // 设置最小缩放限制，但降低限制值以允许更大的视角
+        // 计算一个基于地图大小的最小缩放值，平衡可见性和视角大小
+        const minZoomForLateGame = fullMapZoom * 1.2; // 比全地图视图稍大一些，但允许更大的视角
+        targetZoom = Math.max(targetZoom, minZoomForLateGame);
+        
+        // 保留最大缩放限制
+        targetZoom = Math.min(targetZoom, gameState.maxZoom);
+        
+        // 平滑过渡到新的缩放级别（插值）
+        const smoothFactor = 0.05; // 平滑因子
+        gameState.zoomLevel += (targetZoom - gameState.zoomLevel) * smoothFactor;
+      }
     }
     
     function drawGrid(offsetX, offsetY) {
@@ -1081,6 +1227,9 @@
     }
     
     function drawUI() {
+      // 注意：这个函数现在在gameLoop中的ctx.restore()之后调用，
+      // 所以这里的绘制不会受到缩放的影响
+      
       // 绘制玩家大小信息
       gameState.ctx.fillStyle = "#000";
       gameState.ctx.font = "16px Arial";
@@ -1093,7 +1242,9 @@
     
       // 绘制胜利条件进度
       const mapSize = config.mapSizes[gameState.mapSize];
-      const progress = (gameState.player.size / (mapSize.width / 2)) * 100;
+      // 使用与胜利条件相同的计算方式
+      const mapDimension = Math.min(mapSize.width, mapSize.height);
+      const progress = (gameState.player.size / mapDimension) * 100;
       gameState.ctx.fillText(`进度: ${Math.floor(progress)}%`, 10, 60);
     
       // 绘制敌人数量
@@ -1138,6 +1289,32 @@
       document
         .getElementById("home-btn-victory")
         .addEventListener("click", showStartScreen);
+        
+      // 添加鼠标滚轮事件监听，用于手动调整缩放级别
+      gameState.canvas.addEventListener("wheel", function(e) {
+        if (!gameState.isRunning) return;
+        
+        // 暂时禁用自动缩放
+        gameState.autoZoom = false;
+        
+        // 根据滚轮方向调整缩放级别，使用更小的增量实现更平滑的缩放
+        if (e.deltaY < 0) {
+          // 向上滚动，放大
+          gameState.zoomLevel = Math.min(gameState.zoomLevel + 0.05, gameState.maxZoom);
+        } else {
+          // 向下滚动，缩小
+          gameState.zoomLevel = Math.max(gameState.zoomLevel - 0.05, gameState.minZoom);
+        }
+        
+        // 防止默认行为（页面滚动）
+        e.preventDefault();
+        
+        // 3秒后恢复自动缩放
+        clearTimeout(gameState.zoomTimeout);
+        gameState.zoomTimeout = setTimeout(function() {
+          gameState.autoZoom = true;
+        }, 3000);
+      }, { passive: false });
     
       // 设置键盘控制
       window.addEventListener("keydown", function (e) {
