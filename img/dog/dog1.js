@@ -1,1 +1,2 @@
-export const dog1Url = "https://img.netok.xyz/1750251800769.png";
+// This file is no longer used. Image URL is defined in index.html
+// Original URL: https://img.netok.xyz/1750251800769.png

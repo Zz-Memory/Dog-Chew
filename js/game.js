@@ -1,9 +1,5 @@
-// 导入图片资源
-import { dog1Url } from "../img/dog/dog1.js";
-import { cat1Url } from "../img/cat/cat1.js";
-import { cat2Url } from "../img/cat/cat2.js";
-import { cat3Url } from "../img/cat/cat3.js";
-import { cat4Url } from "../img/cat/cat4.js";
+// 图片资源已在HTML中定义为全局变量
+// dog1Url, cat1Url, cat2Url, cat3Url, cat4Url
 
 // 游戏配置
 const config = {

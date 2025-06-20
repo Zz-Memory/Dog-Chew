@@ -234,6 +234,16 @@
 </head>
 
 <body>
+    <!-- 添加图片资源作为全局变量 -->
+    <script>
+        // 定义图片资源URL
+        const dog1Url = "https://img.netok.xyz/1750251800769.png";
+        const cat1Url = "https://img.netok.xyz/1750251736722.gif";
+        const cat2Url = "https://img.netok.xyz/1750251738562.gif";
+        const cat3Url = "https://img.netok.xyz/1750251744265.jpg";
+        const cat4Url = "https://img.netok.xyz/1750251745128.JPG";
+    </script>
+    
     <div id="start-screen">
         <h1 id="game-title">大狗嚼嚼嚼</h1>
         <!-- 地图大小选择已移除，统一使用中型地图 -->
@@ -265,7 +275,1010 @@
         <button class="screen-btn" id="home-btn-victory">回到首页</button>
     </div>
 
-    <script type="module" src="js/game.js"></script>
+    <!-- 将game.js内容直接嵌入到HTML中，避免文件加载问题 -->
+    <script>
+    // 游戏配置
+    const config = {
+      // 地图尺寸配置 - 实际尺寸会在初始化时设置为3000x3000
+      mapSizes: {
+        small: { width: 1000, height: 1000 },
+        medium: { width: 3000, height: 3000 },
+        large: { width: 5000, height: 5000 },
+      },
+      // 不同地图大小的玩家初始速度
+      initialSpeeds: {
+        small: 180, // 小地图速度快
+        medium: 150,
+        large: 120,  // 大地图速度慢
+      },
+      // 不同地图大小的玩家初始尺寸
+      playerInitialSizes: {
+        small: 30,  // 小地图初始尺寸小
+        medium: 50,
+        large: 100, // 大地图初始尺寸大
+      },
+      minSpeed: 100,
+      // 不同地图大小的安全距离
+      safeDistance: {
+        small: 80,  // 小地图安全距离小
+        medium: 120,
+        large: 160, // 大地图安全距离大
+      },
+      // 不同地图大小的敌人数量
+      enemyCounts: {
+        small: 8,   // 小地图敌人少
+        medium: 15,
+        large: 25,  // 大地图敌人多
+      },
+      // 不同地图大小的资源密度
+      resourceDensity: {
+        small: 1.5, // 小地图资源密度高
+        medium: 1.2, // 增加中型地图的资源密度
+        large: 1.0, // 大地图资源密度低
+      },
+      // 不同地图大小的资源生成速率（毫秒）
+      resourceGenerationRate: {
+        small: 75,  // 小地图资源生成非常快（加快2倍）
+        medium: 100, // 加快2倍
+        large: 125, // 大地图资源生成较快（加快2倍）
+      },
+      // 不同地图大小的敌人生成速率（毫秒）
+      enemyGenerationRates: {
+        small: 500, // 小型地图：0.5秒一个
+        medium: 1000, // 中型地图：1秒一个
+        large: 1500, // 大型地图：1.5秒一个
+      },
+      // 不同地图大小的初始敌人数量
+      initialEnemyCounts: {
+        small: 4, // 小型地图：4个
+        medium: 8, // 中型地图：8个
+        large: 12, // 大型地图：12个
+      },
+      // 不同地图大小的网格尺寸
+      gridSize: {
+        small: 40,  // 小地图网格小
+        medium: 60,
+        large: 80,  // 大地图网格大
+      },
+      // 炸弹相关配置
+      bombs: {
+        // 不同地图大小的炸弹数量
+        count: {
+          small: 20,
+          medium: 20,
+          large: 20,
+        },
+        // 炸弹生成速率（毫秒）
+        generationRate: {
+          small: 2000, // 2秒
+          medium: 2000, // 2秒
+          large: 2000, // 2秒
+        },
+        // 炸弹大小
+        size: 15,
+        // 炸弹爆炸后产生的资源数量
+        resourceCount: 5,
+        // 体积减少比例
+        shrinkRatio: 0.1, // 10%
+      },
+    };
+    
+    // 游戏状态
+    let gameState = {
+      mapSize: "medium", // 统一使用中型地图
+      controlType: "keyboard",
+      isRunning: false,
+      canvas: null,
+      ctx: null,
+      player: null,
+      enemies: [],
+      resources: [],
+      bombs: [],
+      keysPressed: {},
+      joystickActive: false,
+      joystickAngle: 0,
+      joystickStrength: 0,
+      lastTime: 0,
+      resourceTimer: 0,
+      enemyTimer: 0,
+      bombTimer: 0,
+    };
+    
+    // 玩家类
+    class Player {
+      constructor(x, y, size) {
+        this.x = x;
+        this.y = y;
+        this.size = size; // 直径
+        this.initialSize = size;
+        this.speed = getInitialSpeed();
+        this.img = createImage(dog1Url);
+      }
+    
+      update(deltaTime) {
+        // 根据按键或摇杆更新位置
+        let dx = 0;
+        let dy = 0;
+    
+        if (gameState.controlType === "keyboard") {
+          if (gameState.keysPressed["w"] || gameState.keysPressed["ArrowUp"])
+            dy -= 1;
+          if (gameState.keysPressed["s"] || gameState.keysPressed["ArrowDown"])
+            dy += 1;
+          if (gameState.keysPressed["a"] || gameState.keysPressed["ArrowLeft"])
+            dx -= 1;
+          if (gameState.keysPressed["d"] || gameState.keysPressed["ArrowRight"])
+            dx += 1;
+    
+          // 归一化对角线移动
+          if (dx !== 0 && dy !== 0) {
+            const length = Math.sqrt(dx * dx + dy * dy);
+            dx /= length;
+            dy /= length;
+          }
+        } else if (
+          gameState.controlType === "joystick" &&
+          gameState.joystickActive
+        ) {
+          dx = Math.cos(gameState.joystickAngle) * gameState.joystickStrength;
+          dy = Math.sin(gameState.joystickAngle) * gameState.joystickStrength;
+        }
+    
+        // 计算当前速度
+        const currentSpeed = this.calculateSpeed();
+    
+        // 更新位置
+        this.x += dx * currentSpeed * deltaTime;
+        this.y += dy * currentSpeed * deltaTime;
+    
+        // 边界检查 - 使用地图尺寸而不是画布尺寸
+        const mapSize = config.mapSizes[gameState.mapSize];
+        this.x = Math.max(
+          this.size / 2,
+          Math.min(mapSize.width - this.size / 2, this.x)
+        );
+        this.y = Math.max(
+          this.size / 2,
+          Math.min(mapSize.height - this.size / 2, this.y)
+        );
+    
+        // 检查资源碰撞
+        this.checkResourceCollisions();
+    
+        // 检查敌人碰撞
+        this.checkEnemyCollisions();
+    
+        // 检查胜利条件
+        this.checkVictoryCondition();
+      }
+    
+      calculateSpeed() {
+        // 速度衰减公式：当前速度 = 初始速度 × (初始直径 / 当前直径)^0.5
+        let speed = getInitialSpeed() * Math.pow(this.initialSize / this.size, 0.5);
+    
+        // 最低速度限制
+        return Math.max(speed, config.minSpeed);
+      }
+    
+      checkResourceCollisions() {
+        for (let i = gameState.resources.length - 1; i >= 0; i--) {
+          const resource = gameState.resources[i];
+          const distance = getDistance(this.x, this.y, resource.x, resource.y);
+    
+          if (distance < this.size / 2 + resource.size / 2) {
+            // 吃到资源，增加体积
+            this.size += resource.size * 0.5;
+            gameState.resources.splice(i, 1);
+          }
+        }
+      }
+    
+      checkEnemyCollisions() {
+        for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+          const enemy = gameState.enemies[i];
+          const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
+    
+          // 如果玩家比敌人大，且距离小于玩家半径+敌人半径，则吃掉敌人
+          if (this.size > enemy.size * 1.2 && distance < this.size / 2) {
+            // 吃掉敌人，增加体积
+            this.size += enemy.size * 0.3;
+            gameState.enemies.splice(i, 1);
+          }
+          // 如果敌人比玩家大，且距离小于敌人半径，则玩家被吃掉
+          else if (enemy.size > this.size * 1.2 && distance < enemy.size / 2) {
+            gameOver();
+            return;
+          }
+        }
+      }
+    
+      checkVictoryCondition() {
+        const mapSize = config.mapSizes[gameState.mapSize];
+        // 如果玩家体积超过地图宽度的一半，则获胜
+        if (this.size >= mapSize.width / 2) {
+          victory();
+        }
+      }
+    
+      draw(ctx, offsetX, offsetY) {
+        // 绘制玩家
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(
+          this.img,
+          this.x - offsetX - this.size / 2,
+          this.y - offsetY - this.size / 2,
+          this.size,
+          this.size
+        );
+        ctx.restore();
+      }
+    }
+    
+    // 敌人类
+    class Enemy {
+      constructor(x, y, size) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.speed = getRandomSpeed();
+        this.targetX = x;
+        this.targetY = y;
+        this.retargetTimer = 0;
+        this.retargetInterval = getRandomRetargetInterval();
+        this.img = createImage(getRandomCatUrl());
+      }
+    
+      update(deltaTime) {
+        // 更新重新定位计时器
+        this.retargetTimer += deltaTime * 1000;
+        if (this.retargetTimer >= this.retargetInterval) {
+          this.retargetTimer = 0;
+          this.retargetInterval = getRandomRetargetInterval();
+          this.setNewTarget();
+        }
+    
+        // 向目标移动
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+    
+        if (distance > 1) {
+          const moveX = (dx / distance) * this.speed * deltaTime;
+          const moveY = (dy / distance) * this.speed * deltaTime;
+          this.x += moveX;
+          this.y += moveY;
+        }
+    
+        // 边界检查
+        const mapSize = config.mapSizes[gameState.mapSize];
+        this.x = Math.max(
+          this.size / 2,
+          Math.min(mapSize.width - this.size / 2, this.x)
+        );
+        this.y = Math.max(
+          this.size / 2,
+          Math.min(mapSize.height - this.size / 2, this.y)
+        );
+    
+        // 检查资源碰撞
+        this.checkResourceCollisions();
+    
+        // 检查敌人碰撞
+        this.checkEnemyCollisions();
+    
+        // 检查炸弹碰撞
+        this.checkBombCollisions();
+      }
+    
+      setNewTarget() {
+        const mapSize = config.mapSizes[gameState.mapSize];
+        const safeDistance = config.safeDistance[gameState.mapSize];
+    
+        // 如果玩家存在且比敌人小，敌人会追逐玩家
+        if (
+          gameState.player &&
+          gameState.player.size < this.size * 1.2 &&
+          Math.random() < 0.7
+        ) {
+          this.targetX = gameState.player.x;
+          this.targetY = gameState.player.y;
+        }
+        // 如果玩家存在且比敌人大，敌人会远离玩家
+        else if (
+          gameState.player &&
+          gameState.player.size > this.size * 1.2 &&
+          Math.random() < 0.7
+        ) {
+          const dx = this.x - gameState.player.x;
+          const dy = this.y - gameState.player.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+    
+          if (distance < safeDistance * 2) {
+            // 远离玩家的方向
+            this.targetX = this.x + (dx / distance) * safeDistance * 2;
+            this.targetY = this.y + (dy / distance) * safeDistance * 2;
+    
+            // 确保目标在地图范围内
+            this.targetX = Math.max(
+              this.size / 2,
+              Math.min(mapSize.width - this.size / 2, this.targetX)
+            );
+            this.targetY = Math.max(
+              this.size / 2,
+              Math.min(mapSize.height - this.size / 2, this.targetY)
+            );
+          } else {
+            // 随机目标
+            this.targetX = Math.random() * mapSize.width;
+            this.targetY = Math.random() * mapSize.height;
+          }
+        }
+        // 否则随机移动
+        else {
+          this.targetX = Math.random() * mapSize.width;
+          this.targetY = Math.random() * mapSize.height;
+        }
+      }
+    
+      checkResourceCollisions() {
+        for (let i = gameState.resources.length - 1; i >= 0; i--) {
+          const resource = gameState.resources[i];
+          const distance = getDistance(this.x, this.y, resource.x, resource.y);
+    
+          if (distance < this.size / 2 + resource.size / 2) {
+            // 吃到资源，增加体积
+            this.size += resource.size * 0.5;
+            gameState.resources.splice(i, 1);
+          }
+        }
+      }
+    
+      checkEnemyCollisions() {
+        for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+          const enemy = gameState.enemies[i];
+          if (enemy === this) continue;
+    
+          const distance = getDistance(this.x, this.y, enemy.x, enemy.y);
+    
+          // 如果当前敌人比其他敌人大，且距离小于当前敌人半径+其他敌人半径，则吃掉其他敌人
+          if (this.size > enemy.size * 1.2 && distance < this.size / 2 + enemy.size / 2) {
+            // 吃掉敌人，增加体积
+            this.size += enemy.size * 0.3;
+            gameState.enemies.splice(i, 1);
+          }
+        }
+      }
+    
+      checkBombCollisions() {
+        for (let i = gameState.bombs.length - 1; i >= 0; i--) {
+          const bomb = gameState.bombs[i];
+          const distance = getDistance(this.x, this.y, bomb.x, bomb.y);
+    
+          if (distance < this.size / 2 + bomb.size / 2) {
+            // 碰到炸弹，减小体积
+            this.size *= (1 - config.bombs.shrinkRatio);
+            // 如果体积太小，敌人消失
+            if (this.size < 10) {
+              gameState.enemies.splice(gameState.enemies.indexOf(this), 1);
+            }
+            // 炸弹爆炸，生成资源
+            explodeBomb(bomb);
+            gameState.bombs.splice(i, 1);
+          }
+        }
+      }
+    
+      draw(ctx, offsetX, offsetY) {
+        // 绘制敌人
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(
+          this.img,
+          this.x - offsetX - this.size / 2,
+          this.y - offsetY - this.size / 2,
+          this.size,
+          this.size
+        );
+        ctx.restore();
+      }
+    }
+    
+    // 资源类
+    class Resource {
+      constructor(x, y, size) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.color = getRandomColor();
+      }
+    
+      draw(ctx, offsetX, offsetY) {
+        // 绘制资源
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, this.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // 炸弹类
+    class Bomb {
+      constructor(x, y, size) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.pulsePhase = 0;
+      }
+    
+      update(deltaTime) {
+        // 脉冲动画
+        this.pulsePhase += deltaTime * 5;
+        if (this.pulsePhase > Math.PI * 2) {
+          this.pulsePhase -= Math.PI * 2;
+        }
+      }
+    
+      draw(ctx, offsetX, offsetY) {
+        // 绘制炸弹
+        const pulseSize = this.size * (0.8 + 0.2 * Math.sin(this.pulsePhase));
+    
+        // 外圈
+        ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+        ctx.beginPath();
+        ctx.arc(this.x - offsetX, this.y - offsetY, pulseSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+    
+        // 内圈
+        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+        ctx.beginPath();
+        ctx.arc(
+          this.x - offsetX,
+          this.y - offsetY,
+          pulseSize / 3,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+    }
+    
+    // 辅助函数
+    function getDistance(x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    function getRandomColor() {
+      const colors = [
+        "#FF5252", // 红色
+        "#FF4081", // 粉色
+        "#E040FB", // 紫色
+        "#7C4DFF", // 深紫色
+        "#536DFE", // 靛蓝色
+        "#448AFF", // 蓝色
+        "#40C4FF", // 浅蓝色
+        "#18FFFF", // 青色
+        "#64FFDA", // 蓝绿色
+        "#69F0AE", // 绿色
+        "#B2FF59", // 浅绿色
+        "#EEFF41", // 酸橙色
+        "#FFFF00", // 黄色
+        "#FFD740", // 琥珀色
+        "#FFAB40", // 橙色
+        "#FF6E40", // 深橙色
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    function getRandomPosition(minDistance = 0) {
+      const mapSize = config.mapSizes[gameState.mapSize];
+      let x, y, tooClose;
+    
+      do {
+        tooClose = false;
+        x = Math.random() * mapSize.width;
+        y = Math.random() * mapSize.height;
+    
+        // 检查是否离玩家太近
+        if (gameState.player) {
+          const distance = getDistance(x, y, gameState.player.x, gameState.player.y);
+          if (distance < minDistance) {
+            tooClose = true;
+            continue;
+          }
+        }
+    
+        // 检查是否离其他敌人太近
+        for (const enemy of gameState.enemies) {
+          const distance = getDistance(x, y, enemy.x, enemy.y);
+          if (distance < minDistance) {
+            tooClose = true;
+            break;
+          }
+        }
+      } while (tooClose);
+    
+      return { x, y };
+    }
+    
+    function getRandomSize(min, max) {
+      return min + Math.random() * (max - min);
+    }
+    
+    function getRandomSpeed() {
+      return 100 + Math.random() * 100;
+    }
+    
+    function getRandomRetargetInterval() {
+      return 1000 + Math.random() * 4000;
+    }
+    
+    function getRandomCatUrl() {
+      const catUrls = [cat1Url, cat2Url, cat3Url, cat4Url];
+      return catUrls[Math.floor(Math.random() * catUrls.length)];
+    }
+    
+    function createImage(src) {
+      const img = new Image();
+      img.src = src;
+      return img;
+    }
+    
+    function getInitialSpeed() {
+      return config.initialSpeeds[gameState.mapSize];
+    }
+    
+    function getInitialPlayerSize() {
+      return config.playerInitialSizes[gameState.mapSize];
+    }
+    
+    function generateResource() {
+      const mapSize = config.mapSizes[gameState.mapSize];
+      const position = getRandomPosition();
+      const size = getRandomSize(5, 15);
+      gameState.resources.push(new Resource(position.x, position.y, size));
+    }
+    
+    function generateEnemy() {
+      const safeDistance = config.safeDistance[gameState.mapSize];
+      const position = getRandomPosition(safeDistance);
+      const size = getRandomSize(20, 80);
+      gameState.enemies.push(new Enemy(position.x, position.y, size));
+    }
+    
+    function generateBomb() {
+      const position = getRandomPosition();
+      gameState.bombs.push(new Bomb(position.x, position.y, config.bombs.size));
+    }
+    
+    function explodeBomb(bomb) {
+      // 炸弹爆炸，生成资源
+      for (let i = 0; i < config.bombs.resourceCount; i++) {
+        const angle = (Math.PI * 2 * i) / config.bombs.resourceCount;
+        const distance = bomb.size;
+        const x = bomb.x + Math.cos(angle) * distance;
+        const y = bomb.y + Math.sin(angle) * distance;
+        const size = getRandomSize(5, 10);
+        gameState.resources.push(new Resource(x, y, size));
+      }
+    }
+    
+    function gameOver() {
+      gameState.isRunning = false;
+      document.getElementById("game-over-screen").style.display = "flex";
+    }
+    
+    function victory() {
+      gameState.isRunning = false;
+      document.getElementById("victory-screen").style.display = "flex";
+    }
+    
+    function resetGame() {
+      // 重置游戏状态
+      gameState.isRunning = true;
+      gameState.resources = [];
+      gameState.enemies = [];
+      gameState.bombs = [];
+      gameState.resourceTimer = 0;
+      gameState.enemyTimer = 0;
+      gameState.bombTimer = 0;
+    
+      // 创建玩家
+      const mapSize = config.mapSizes[gameState.mapSize];
+      gameState.player = new Player(
+        mapSize.width / 2,
+        mapSize.height / 2,
+        getInitialPlayerSize()
+      );
+    
+      // 初始化敌人
+      const initialEnemyCount = config.initialEnemyCounts[gameState.mapSize];
+      for (let i = 0; i < initialEnemyCount; i++) {
+        generateEnemy();
+      }
+    
+      // 初始化资源
+      const initialResourceCount = Math.floor(
+        (mapSize.width * mapSize.height) /
+          (10000 / config.resourceDensity[gameState.mapSize])
+      );
+      for (let i = 0; i < initialResourceCount; i++) {
+        generateResource();
+      }
+    
+      // 初始化炸弹
+      const initialBombCount = config.bombs.count[gameState.mapSize];
+      for (let i = 0; i < initialBombCount; i++) {
+        generateBomb();
+      }
+    
+      // 隐藏开始屏幕和结束屏幕
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("game-over-screen").style.display = "none";
+      document.getElementById("victory-screen").style.display = "none";
+      document.getElementById("game-container").style.display = "block";
+    
+      // 显示摇杆（如果使用摇杆控制）
+      if (gameState.controlType === "joystick") {
+        document.getElementById("joystick-container").style.display = "block";
+      } else {
+        document.getElementById("joystick-container").style.display = "none";
+      }
+    
+      // 开始游戏循环
+      gameState.lastTime = performance.now() / 1000;
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function gameLoop(timestamp) {
+      if (!gameState.isRunning) return;
+    
+      const currentTime = timestamp / 1000;
+      const deltaTime = currentTime - gameState.lastTime;
+      gameState.lastTime = currentTime;
+    
+      // 更新资源生成计时器
+      gameState.resourceTimer += deltaTime * 1000;
+      const resourceGenerationRate =
+        config.resourceGenerationRate[gameState.mapSize];
+      if (gameState.resourceTimer >= resourceGenerationRate) {
+        gameState.resourceTimer -= resourceGenerationRate;
+        generateResource();
+      }
+    
+      // 更新敌人生成计时器
+      gameState.enemyTimer += deltaTime * 1000;
+      const enemyGenerationRate = config.enemyGenerationRates[gameState.mapSize];
+      if (
+        gameState.enemyTimer >= enemyGenerationRate &&
+        gameState.enemies.length < config.enemyCounts[gameState.mapSize]
+      ) {
+        gameState.enemyTimer -= enemyGenerationRate;
+        generateEnemy();
+      }
+    
+      // 更新炸弹生成计时器
+      gameState.bombTimer += deltaTime * 1000;
+      const bombGenerationRate = config.bombs.generationRate[gameState.mapSize];
+      if (
+        gameState.bombTimer >= bombGenerationRate &&
+        gameState.bombs.length < config.bombs.count[gameState.mapSize]
+      ) {
+        gameState.bombTimer -= bombGenerationRate;
+        generateBomb();
+      }
+    
+      // 更新玩家
+      gameState.player.update(deltaTime);
+    
+      // 更新敌人
+      for (const enemy of gameState.enemies) {
+        enemy.update(deltaTime);
+      }
+    
+      // 更新炸弹
+      for (const bomb of gameState.bombs) {
+        bomb.update(deltaTime);
+      }
+    
+      // 计算相机偏移
+      const offsetX = calculateCameraOffsetX();
+      const offsetY = calculateCameraOffsetY();
+    
+      // 清除画布
+      gameState.ctx.clearRect(
+        0,
+        0,
+        gameState.canvas.width,
+        gameState.canvas.height
+      );
+    
+      // 绘制网格
+      drawGrid(offsetX, offsetY);
+    
+      // 绘制资源
+      for (const resource of gameState.resources) {
+        resource.draw(gameState.ctx, offsetX, offsetY);
+      }
+    
+      // 绘制炸弹
+      for (const bomb of gameState.bombs) {
+        bomb.draw(gameState.ctx, offsetX, offsetY);
+      }
+    
+      // 绘制敌人
+      for (const enemy of gameState.enemies) {
+        enemy.draw(gameState.ctx, offsetX, offsetY);
+      }
+    
+      // 绘制玩家
+      gameState.player.draw(gameState.ctx, offsetX, offsetY);
+    
+      // 绘制UI
+      drawUI();
+    
+      // 继续游戏循环
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function calculateCameraOffsetX() {
+      return gameState.player.x - gameState.canvas.width / 2;
+    }
+    
+    function calculateCameraOffsetY() {
+      return gameState.player.y - gameState.canvas.height / 2;
+    }
+    
+    function drawGrid(offsetX, offsetY) {
+      const gridSize = config.gridSize[gameState.mapSize];
+      const mapSize = config.mapSizes[gameState.mapSize];
+    
+      // 计算可见网格的起始和结束位置
+      const startX = Math.floor(offsetX / gridSize) * gridSize;
+      const startY = Math.floor(offsetY / gridSize) * gridSize;
+      const endX = startX + gameState.canvas.width + gridSize;
+      const endY = startY + gameState.canvas.height + gridSize;
+    
+      // 设置网格样式
+      gameState.ctx.strokeStyle = "rgba(200, 200, 200, 0.2)";
+      gameState.ctx.lineWidth = 1;
+    
+      // 绘制垂直线
+      for (let x = startX; x <= endX; x += gridSize) {
+        if (x < 0 || x > mapSize.width) continue;
+        gameState.ctx.beginPath();
+        gameState.ctx.moveTo(x - offsetX, 0);
+        gameState.ctx.lineTo(x - offsetX, gameState.canvas.height);
+        gameState.ctx.stroke();
+      }
+    
+      // 绘制水平线
+      for (let y = startY; y <= endY; y += gridSize) {
+        if (y < 0 || y > mapSize.height) continue;
+        gameState.ctx.beginPath();
+        gameState.ctx.moveTo(0, y - offsetY);
+        gameState.ctx.lineTo(gameState.canvas.width, y - offsetY);
+        gameState.ctx.stroke();
+      }
+    
+      // 绘制地图边界
+      gameState.ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+      gameState.ctx.lineWidth = 3;
+      gameState.ctx.strokeRect(
+        -offsetX,
+        -offsetY,
+        mapSize.width,
+        mapSize.height
+      );
+    }
+    
+    function drawUI() {
+      // 绘制玩家大小信息
+      gameState.ctx.fillStyle = "#000";
+      gameState.ctx.font = "16px Arial";
+      gameState.ctx.textAlign = "left";
+      gameState.ctx.fillText(
+        `体积: ${Math.floor(gameState.player.size)}`,
+        10,
+        30
+      );
+    
+      // 绘制胜利条件进度
+      const mapSize = config.mapSizes[gameState.mapSize];
+      const progress = (gameState.player.size / (mapSize.width / 2)) * 100;
+      gameState.ctx.fillText(`进度: ${Math.floor(progress)}%`, 10, 60);
+    
+      // 绘制敌人数量
+      gameState.ctx.fillText(
+        `敌人: ${gameState.enemies.length}/${config.enemyCounts[gameState.mapSize]}`,
+        10,
+        90
+      );
+    }
+    
+    // 初始化游戏
+    function initGame() {
+      // 获取画布和上下文
+      gameState.canvas = document.getElementById("game-canvas");
+      gameState.ctx = gameState.canvas.getContext("2d");
+    
+      // 设置画布大小为窗口大小
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+    
+      // 设置控制方式按钮事件
+      const controlButtons = document.querySelectorAll(".control-btn");
+      controlButtons.forEach((button) => {
+        button.addEventListener("click", function () {
+          controlButtons.forEach((btn) => btn.classList.remove("selected"));
+          this.classList.add("selected");
+          gameState.controlType = this.getAttribute("data-control");
+        });
+      });
+    
+      // 设置开始按钮事件
+      document.getElementById("start-btn").addEventListener("click", resetGame);
+    
+      // 设置重新开始按钮事件
+      document.getElementById("restart-btn").addEventListener("click", resetGame);
+      document
+        .getElementById("restart-btn-victory")
+        .addEventListener("click", resetGame);
+    
+      // 设置回到首页按钮事件
+      document.getElementById("home-btn-fail").addEventListener("click", showStartScreen);
+      document
+        .getElementById("home-btn-victory")
+        .addEventListener("click", showStartScreen);
+    
+      // 设置键盘控制
+      window.addEventListener("keydown", function (e) {
+        gameState.keysPressed[e.key] = true;
+      });
+    
+      window.addEventListener("keyup", function (e) {
+        gameState.keysPressed[e.key] = false;
+      });
+    
+      // 设置触摸控制（虚拟摇杆）
+      const joystickContainer = document.getElementById("joystick-container");
+      const joystick = document.getElementById("joystick");
+    
+      // 触摸开始
+      joystickContainer.addEventListener("touchstart", function (e) {
+        e.preventDefault();
+        handleJoystickTouch(e.touches[0]);
+      });
+    
+      // 触摸移动
+      joystickContainer.addEventListener("touchmove", function (e) {
+        e.preventDefault();
+        handleJoystickTouch(e.touches[0]);
+      });
+    
+      // 触摸结束
+      joystickContainer.addEventListener("touchend", function (e) {
+        e.preventDefault();
+        gameState.joystickActive = false;
+        joystick.style.transform = "translate(-50%, -50%)";
+      });
+    
+      // 触摸取消
+      joystickContainer.addEventListener("touchcancel", function (e) {
+        e.preventDefault();
+        gameState.joystickActive = false;
+        joystick.style.transform = "translate(-50%, -50%)";
+      });
+    
+      // 鼠标控制（用于测试）
+      joystickContainer.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        gameState.joystickActive = true;
+        handleJoystickMouse(e);
+      });
+    
+      window.addEventListener("mousemove", function (e) {
+        if (gameState.joystickActive) {
+          e.preventDefault();
+          handleJoystickMouse(e);
+        }
+      });
+    
+      window.addEventListener("mouseup", function (e) {
+        if (gameState.joystickActive) {
+          e.preventDefault();
+          gameState.joystickActive = false;
+          joystick.style.transform = "translate(-50%, -50%)";
+        }
+      });
+    }
+    
+    function resizeCanvas() {
+      gameState.canvas.width = window.innerWidth;
+      gameState.canvas.height = window.innerHeight;
+    }
+    
+    function showStartScreen() {
+      document.getElementById("start-screen").style.display = "flex";
+      document.getElementById("game-container").style.display = "none";
+      document.getElementById("game-over-screen").style.display = "none";
+      document.getElementById("victory-screen").style.display = "none";
+    }
+    
+    function handleJoystickTouch(touch) {
+      const joystickContainer = document.getElementById("joystick-container");
+      const joystick = document.getElementById("joystick");
+      const containerRect = joystickContainer.getBoundingClientRect();
+    
+      // 计算触摸点相对于摇杆容器中心的位置
+      const centerX = containerRect.left + containerRect.width / 2;
+      const centerY = containerRect.top + containerRect.height / 2;
+      const touchX = touch.clientX - centerX;
+      const touchY = touch.clientY - centerY;
+    
+      // 计算距离和角度
+      const distance = Math.sqrt(touchX * touchX + touchY * touchY);
+      const angle = Math.atan2(touchY, touchX);
+    
+      // 限制摇杆移动范围
+      const maxDistance = containerRect.width / 2;
+      const limitedDistance = Math.min(distance, maxDistance);
+    
+      // 计算摇杆位置
+      const joystickX = limitedDistance * Math.cos(angle);
+      const joystickY = limitedDistance * Math.sin(angle);
+    
+      // 更新摇杆位置
+      joystick.style.transform = `translate(calc(-50% + ${joystickX}px), calc(-50% + ${joystickY}px))`;
+    
+      // 更新游戏状态
+      gameState.joystickActive = true;
+      gameState.joystickAngle = angle;
+      gameState.joystickStrength = limitedDistance / maxDistance;
+    }
+    
+    function handleJoystickMouse(e) {
+      const joystickContainer = document.getElementById("joystick-container");
+      const joystick = document.getElementById("joystick");
+      const containerRect = joystickContainer.getBoundingClientRect();
+    
+      // 计算鼠标点相对于摇杆容器中心的位置
+      const centerX = containerRect.left + containerRect.width / 2;
+      const centerY = containerRect.top + containerRect.height / 2;
+      const mouseX = e.clientX - centerX;
+      const mouseY = e.clientY - centerY;
+    
+      // 计算距离和角度
+      const distance = Math.sqrt(mouseX * mouseX + mouseY * mouseY);
+      const angle = Math.atan2(mouseY, mouseX);
+    
+      // 限制摇杆移动范围
+      const maxDistance = containerRect.width / 2;
+      const limitedDistance = Math.min(distance, maxDistance);
+    
+      // 计算摇杆位置
+      const joystickX = limitedDistance * Math.cos(angle);
+      const joystickY = limitedDistance * Math.sin(angle);
+    
+      // 更新摇杆位置
+      joystick.style.transform = `translate(calc(-50% + ${joystickX}px), calc(-50% + ${joystickY}px))`;
+    
+      // 更新游戏状态
+      gameState.joystickAngle = angle;
+      gameState.joystickStrength = limitedDistance / maxDistance;
+    }
+    
+    // 启动游戏
+    document.addEventListener("DOMContentLoaded", initGame);
+    </script>
 </body>
 
 </html>

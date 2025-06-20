@@ -1,1 +1,2 @@
-export const cat4Url = "https://img.netok.xyz/1750251745128.JPG";
+// This file is no longer used. Image URL is defined in index.html
+// Original URL: https://img.netok.xyz/1750251745128.JPG
